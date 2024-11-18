@@ -24,12 +24,15 @@ labelMap = [
 syncNN = True
 
 pipeline = dai.Pipeline()
+pipeline.setXLinkChunkSize(0)
+
 yoloSpatial = pipeline.create(dai.node.YoloSpatialDetectionNetwork)
 yoloSpatial.setBlobPath(nnBlobPath)
 
 # Spatial detection specific parameters
 yoloSpatial.setConfidenceThreshold(0.5)
 yoloSpatial.input.setBlocking(False)
+yoloSpatial.input.setQueueSize(1)
 yoloSpatial.setBoundingBoxScaleFactor(0.5)
 yoloSpatial.setDepthLowerThreshold(100)  # Min 10 centimeters
 yoloSpatial.setDepthUpperThreshold(5000)  # Max 5 meters
@@ -62,6 +65,7 @@ camRgb.setPreviewSize(640, 352)
 camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
 camRgb.setInterleaved(False)
 camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
+camRgb.setFps(10)
 
 leftRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
 leftRgb.setCamera("left")
@@ -70,11 +74,6 @@ leftRgb.setIspScale(2, 3)
 rightRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1200_P)
 rightRgb.setCamera("right")
 rightRgb.setIspScale(2, 3)
-
-print("Left cam resolution:", leftRgb.getResolutionWidth(),
-      leftRgb.getResolutionHeight())
-print("Right cam resolution:", rightRgb.getResolutionWidth(),
-      rightRgb.getResolutionHeight())
 
 stereo.setDefaultProfilePreset(dai.node.StereoDepth.PresetMode.HIGH_DENSITY)
 stereo.setDepthAlign(dai.CameraBoardSocket.CAM_A)
@@ -98,6 +97,8 @@ yoloSpatial.outNetwork.link(nnNetworkOut.input)
 
 # Connect to device and start pipeline
 with dai.Device(pipeline) as device:
+    device.setLogLevel(dai.LogLevel.DEBUG)
+    device.setLogOutputLevel(dai.LogLevel.DEBUG)
 
     # Output queues will be used to get the rgb frames and nn data from the outputs defined above
     previewQueue = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
